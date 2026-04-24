@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: cache-salt-extproc
+  namespace: llm-cache-salt
+  labels:
+    app.kubernetes.io/name: cache-salt-extproc
+    app.kubernetes.io/component: extproc
+spec:
+  selector:
+    app.kubernetes.io/name: cache-salt-extproc
+  ports:
+    - name: grpc
+      port: 9002
+      targetPort: grpc
+      protocol: TCP
+  type: ClusterIP

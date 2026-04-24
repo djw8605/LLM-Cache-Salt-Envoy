@@ -1,0 +1,15 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Production overlay – CI updates the image tag here via `kustomize edit set image`.
+resources:
+  - ../../base
+
+namespace: llm-cache-salt
+
+# CI replaces the tag below on every successful build:
+#   kustomize edit set image cache-salt-extproc=ghcr.io/OWNER/cache-salt-extproc:<git-sha>
+images:
+  - name: cache-salt-extproc
+    newName: ghcr.io/OWNER/cache-salt-extproc
+    newTag: latest

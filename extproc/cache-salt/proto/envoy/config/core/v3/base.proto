@@ -1,0 +1,33 @@
+// Minimal subset of envoy/config/core/v3/base.proto
+// Only the fields required by the ext_proc service are defined here.
+syntax = "proto3";
+
+package envoy.config.core.v3;
+
+option java_package = "io.envoyproxy.envoy.config.core.v3";
+option go_package = "github.com/envoyproxy/go-control-plane/envoy/config/core/v3;corev3";
+
+// A single HTTP header entry.
+message HeaderValue {
+  // Header name.
+  string key = 1;
+  // Header value.
+  // The same format as HTTP header values.
+  string value = 2;
+  // The value of this header represented as a sequence of bytes.
+  // When raw_value is set, the value field is ignored.
+  bytes raw_value = 3;
+}
+
+// Wrapper for a set of headers.
+message HeaderMap {
+  repeated HeaderValue headers = 1;
+}
+
+// Appended header action: describes how a header should be sent.
+message HeaderValueOption {
+  // The header field to send.
+  HeaderValue header = 1;
+  // Whether the value should be kept if the header already exists.
+  bool keep_empty_value = 3;
+}

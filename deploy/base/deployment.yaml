@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cache-salt-extproc
+  namespace: llm-cache-salt
+  labels:
+    app.kubernetes.io/name: cache-salt-extproc
+    app.kubernetes.io/component: extproc
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: cache-salt-extproc
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: cache-salt-extproc
+        app.kubernetes.io/component: extproc
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10000
+        fsGroup: 10000
+      containers:
+        - name: cache-salt-extproc
+          # Image tag is managed by kustomize and updated by CI.
+          # The short name `cache-salt-extproc` is resolved to the full registry
+          # URL by the `images:` transformer in the kustomization files.
+          image: cache-salt-extproc:latest
+          imagePullPolicy: Always
+          ports:
+            - name: grpc
+              containerPort: 50051
+              protocol: TCP
+          env:
+            - name: PORT
+              value: "50051"
+            - name: LOG_LEVEL
+              value: "INFO"
+            - name: CACHE_SALT_HMAC_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: cache-salt-hmac
+                  key: secret
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "64Mi"
+            limits:
+              cpu: "500m"
+              memory: "128Mi"
+          livenessProbe:
+            grpc:
+              port: 50051
+            initialDelaySeconds: 5
+            periodSeconds: 15
+          readinessProbe:
+            grpc:
+              port: 50051
+            initialDelaySeconds: 3
+            periodSeconds: 10
+      terminationGracePeriodSeconds: 30
