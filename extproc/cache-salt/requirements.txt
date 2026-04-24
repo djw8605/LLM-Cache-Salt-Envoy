@@ -1,0 +1,4 @@
+# Runtime dependencies for the cache-salt ext_proc service.
+# Pin minor versions for reproducibility; update with Dependabot.
+grpcio==1.80.0
+protobuf==6.33.6

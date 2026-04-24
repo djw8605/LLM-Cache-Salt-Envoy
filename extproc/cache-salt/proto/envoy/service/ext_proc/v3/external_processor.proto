@@ -1,0 +1,142 @@
+// Minimal subset of envoy/service/ext_proc/v3/external_processor.proto
+// Field numbers match the official Envoy data-plane API so wire compatibility
+// is maintained with Envoy Gateway's EnvoyExtensionPolicy ext_proc filter.
+// Only messages and fields used by the cache-salt service are included.
+syntax = "proto3";
+
+package envoy.service.ext_proc.v3;
+
+import "envoy/config/core/v3/base.proto";
+import "google/protobuf/duration.proto";
+
+option java_package = "io.envoyproxy.envoy.service.ext_proc.v3";
+option go_package = "github.com/envoyproxy/go-control-plane/envoy/service/ext_proc/v3;ext_procv3";
+
+// The External Processing service.  A bidirectional streaming RPC where
+// each HTTP request/response lifecycle is handled on one gRPC stream.
+service ExternalProcessor {
+  rpc Process(stream ProcessingRequest) returns (stream ProcessingResponse) {}
+}
+
+// A single processing phase sent by Envoy to the ext_proc service.
+// [#next-free-field: 9]
+message ProcessingRequest {
+  // If true, the server may process this message asynchronously.
+  bool async_mode = 1;
+
+  // One message per HTTP lifecycle phase.
+  oneof request {
+    HttpHeaders request_headers  = 2;
+    HttpHeaders response_headers = 3;
+    HttpBody    request_body     = 4;
+    HttpBody    response_body    = 5;
+    HttpTrailers request_trailers  = 6;
+    HttpTrailers response_trailers = 7;
+  }
+}
+
+// The response sent by the ext_proc service back to Envoy.
+// [#next-free-field: 11]
+message ProcessingResponse {
+  oneof response {
+    HeadersResponse  request_headers   = 1;
+    HeadersResponse  response_headers  = 2;
+    BodyResponse     request_body      = 3;
+    BodyResponse     response_body     = 4;
+    TrailersResponse request_trailers  = 5;
+    TrailersResponse response_trailers = 6;
+    ImmediateResponse immediate_response = 7;
+  }
+
+  // Optional: override the message-level processing timeout for this request.
+  google.protobuf.Duration override_message_timeout = 10;
+}
+
+// Received HTTP headers (request or response side).
+message HttpHeaders {
+  // The HTTP headers.
+  envoy.config.core.v3.HeaderMap headers = 1;
+  // True when this is the final message for the current headers phase.
+  bool end_of_stream = 4;
+}
+
+// Received HTTP body chunk.
+message HttpBody {
+  bytes body = 1;
+  bool  end_of_stream = 2;
+}
+
+// Received HTTP trailers.
+message HttpTrailers {
+  envoy.config.core.v3.HeaderMap trailers = 1;
+}
+
+// Response to a request_headers or response_headers phase.
+message HeadersResponse {
+  CommonResponse response = 1;
+}
+
+// Response to a request_body or response_body phase.
+message BodyResponse {
+  CommonResponse response = 1;
+}
+
+// Response to a request_trailers or response_trailers phase.
+message TrailersResponse {
+  // Header mutations to apply to trailers (rare).
+  HeaderMutation header_mutation = 1;
+}
+
+// Generic processing result shared by headers and body responses.
+message CommonResponse {
+  enum ResponseStatus {
+    // Continue processing; apply any mutations but do not stop the chain.
+    CONTINUE = 0;
+    // Replace the whole body (or clear headers) and continue.
+    CONTINUE_AND_REPLACE = 1;
+  }
+
+  // How to proceed after this phase.
+  ResponseStatus status = 1;
+  // Optional header mutations.
+  HeaderMutation header_mutation = 2;
+  // Optional body mutation (used with request_body / response_body responses).
+  BodyMutation body_mutation = 3;
+  // If true, clear the route cache after mutations.
+  bool clear_route_cache = 4;
+}
+
+// Mutate the body.
+message BodyMutation {
+  oneof mutation {
+    // Replace the body with this value.
+    bytes body = 1;
+    // Clear the body entirely.
+    bool clear_body = 2;
+  }
+}
+
+// Mutation instructions for HTTP headers.
+message HeaderMutation {
+  // Headers to add or overwrite.
+  repeated envoy.config.core.v3.HeaderValueOption set_headers = 1;
+  // Header keys to remove.
+  repeated string remove_headers = 2;
+}
+
+// Send an immediate HTTP response without forwarding to the upstream.
+message ImmediateResponse {
+  // HTTP status code.
+  HttpStatus status = 1;
+  // Optional header mutations.
+  HeaderMutation headers = 2;
+  // Optional response body.
+  bytes body = 3;
+  // Optional details string (for logging).
+  string details = 4;
+}
+
+// Minimal HTTP status representation.
+message HttpStatus {
+  uint32 code = 1;
+}

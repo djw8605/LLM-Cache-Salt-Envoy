@@ -1,0 +1,24 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: llm-cache-salt
+
+resources:
+  - namespace.yaml
+  - deployment.yaml
+  - service.yaml
+  - secret-example.yaml
+  - envoy-extension-policy.yaml
+
+# Default image – overlays can pin to a specific tag via `images:`.
+# CI updates the image tag in the prod overlay using:
+#   kustomize edit set image ghcr.io/OWNER/cache-salt-extproc=ghcr.io/OWNER/cache-salt-extproc:<sha>
+images:
+  - name: cache-salt-extproc
+    newName: ghcr.io/OWNER/cache-salt-extproc
+    newTag: latest
+
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: llm-cache-salt-envoy
+    includeSelectors: false

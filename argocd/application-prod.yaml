@@ -1,0 +1,29 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cache-salt-extproc-prod
+  # Deploy the Argo CD Application itself into the argocd namespace.
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: cache-salt-extproc
+    environment: prod
+spec:
+  project: default
+
+  source:
+    # REQUIRED: Update this URL to point to your actual Git repository.
+    repoURL: https://github.com/OWNER/REPO.git   # <-- UPDATE THIS
+    targetRevision: HEAD
+    path: deploy/overlays/prod
+
+  destination:
+    # REQUIRED: Update to the API server URL of your production cluster.
+    server: https://kubernetes.default.svc          # <-- UPDATE IF NEEDED
+    namespace: llm-cache-salt
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

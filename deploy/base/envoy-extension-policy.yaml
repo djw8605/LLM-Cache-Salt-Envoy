@@ -1,0 +1,36 @@
+# EnvoyExtensionPolicy – attaches the cache-salt ext_proc filter to an HTTPRoute.
+#
+# IMPORTANT: Update the `targetRef.name` field below to match the name of the
+# HTTPRoute that receives your vLLM inference traffic.  The HTTPRoute must exist
+# in the same namespace as this policy (llm-cache-salt), or use the
+# `targetRef.namespace` field if the route lives elsewhere (requires ReferenceGrant).
+#
+# Envoy Gateway docs: https://gateway.envoyproxy.io/latest/tasks/extensibility/ext-proc/
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyExtensionPolicy
+metadata:
+  name: cache-salt-extproc-policy
+  namespace: llm-cache-salt
+spec:
+  # Target the HTTPRoute that fronts your vLLM deployment.
+  # Change `name` to match your actual HTTPRoute name.
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: vllm-inference   # <-- UPDATE THIS to your HTTPRoute name
+    # namespace: llm-cache-salt  # uncomment if the HTTPRoute is in a different namespace
+
+  extProc:
+    - backendRefs:
+        - name: cache-salt-extproc
+          namespace: llm-cache-salt
+          port: 9002
+      # Send request headers to the ext_proc service so we can extract the
+      # bearer token.
+      processingMode:
+        request:
+          # Buffer the entire request body before sending it so we can mutate it.
+          body: Buffered
+      # Allow up to 5 seconds for the ext_proc service to respond before timing
+      # out and passing the request through.
+      messageTimeout: 5s
